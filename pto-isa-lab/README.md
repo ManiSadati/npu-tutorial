@@ -86,3 +86,12 @@ PTO headers default to `~/pto-isa/include`; override with
 `PTO_ISA_ROOT=/path/to/pto-isa ./run.sh`. The tested checkout is
 `896d8ec69aaf5b623fead5afcae7a657fa784a2b`; its existing local change to
 `TBinOp.hpp` is whitespace only and was left untouched.
+
+## Simulator error: Too many open files
+
+`run.sh` raises its soft open-file limit to the account's hard limit before
+launching the simulator. This affects only the script and its child processes.
+If the simulator still reports `Too many open files`, inspect `ulimit -Sn` and
+`ulimit -Hn`. An administrator must increase the session's hard limit if it is
+too low; the script cannot exceed it. Start a new login session after an account
+limit change. No kernel rebuild is needed: use `./run.sh --no-build`.
