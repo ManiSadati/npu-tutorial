@@ -1,7 +1,7 @@
-# Single-core matrix addition: 100 × 512
+# Single-core matrix addition: 10 × 512
 
 Compute `C[row, col] = A[row, col] + B[row, col]` for two contiguous FP32
-100×512 matrices. This is elementwise addition processed row by row, with no
+10×512 matrices. This is elementwise addition processed row by row, with no
 reduction along the row.
 
 ## Run
@@ -15,7 +15,7 @@ bash run.sh
 ```
 
 Each run builds, generates identical seeded A/B matrices, runs the A5 simulator,
-saves C and compares all 51200 elements with NumPy FP32 addition. Exact equality
+saves C and compares all 5120 elements with NumPy FP32 addition. Exact equality
 is required for this finite, normal-valued test data. Cases include cancellation,
 zero inputs and distinct row/column values to expose indexing errors. Output is
 initialized to NaN to catch missing stores, including the final row.
@@ -23,7 +23,7 @@ initialized to NaN to catch missing stores, including the final row.
 ## One core
 
 Both launchers use `matrix_add<<<1, nullptr, stream>>>`: exactly one vector block.
-That block loops from row 0 through row 99, reusing three 2048-byte UB buffers.
+That block loops from row 0 through row 9, reusing three 2048-byte UB buffers.
 No rows are distributed across cores. Each row completes its GM store before
 reusing the buffers. The target is A5 `dav-c310-vec`.
 
@@ -55,8 +55,8 @@ with SIM_TIMEOUT_SEC. `bash run.sh --no-build` skips compilation.
 - Each `generate.py`/`compare.py`: runnable wrappers sharing `common/` Python code.
 - Each `build/sim-*`: a.bin, b.bin, output.bin, reference.bin, run.log and traces.
 
-Each tensor is 204800 bytes, row-major FP32, shape (100,512). Load with
-`np.fromfile(path, dtype=np.float32).reshape(100, 512)`.
+Each tensor is 20480 bytes, row-major FP32, shape (10,512). Load with
+`np.fromfile(path, dtype=np.float32).reshape(10, 512)`.
 
 To compare an existing output, from either backend folder:
 

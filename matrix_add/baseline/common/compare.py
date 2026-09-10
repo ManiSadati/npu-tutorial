@@ -4,9 +4,9 @@ from pathlib import Path
 import numpy as np
 
 def load(path):
-    if Path(path).stat().st_size != 100 * 512 * 4:
-        raise ValueError(f"{path}: expected exactly 204800 bytes (100x512 FP32)")
-    return np.fromfile(path, dtype=np.float32).reshape(100, 512)
+    if Path(path).stat().st_size != 10 * 512 * 4:
+        raise ValueError(f"{path}: expected exactly 20480 bytes (10x512 FP32)")
+    return np.fromfile(path, dtype=np.float32).reshape(10, 512)
 
 def check(label, got, expected):
     correct = np.isfinite(got) & (got == expected)

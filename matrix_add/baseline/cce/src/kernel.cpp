@@ -1,11 +1,11 @@
 #include <stdint.h>
 // Raw A5 CCE intrinsics. Compile this .cpp with ccec -x cce.
-// One block processes all 100 rows of 512 FP32 elements (eight vectors per row).
+// One block processes all 10 rows of 512 FP32 elements (eight vectors per row).
 extern "C" __global__ [aicore] void matrix_add(__gm__ float* a, __gm__ float* b, __gm__ float* c) {
     auto ua = (__ubuf__ float*)get_imm(0);
     auto ub = (__ubuf__ float*)get_imm(2048);
     auto uc = (__ubuf__ float*)get_imm(4096);
-    for (unsigned row = 0; row < 100; ++row) {
+    for (unsigned row = 0; row < 10; ++row) {
         // DMA lengths are bytes; one contiguous 2048-byte burst.
         copy_gm_to_ubuf_align_v2((__ubuf__ uint16_t*)ua, (__gm__ uint16_t*)(a + row * 512),
                                0, 1, 2048, 0, 0, false, 0, 0, 0);
