@@ -44,6 +44,45 @@ explicitly name and operate on sixteen vector registers. Input stays live
 through max; those same registers hold exponentials through sum and division.
 There is no intermediate exponential UB buffer traffic and no online repair.
 
+Brief pseudocode below starts after GM input is loaded into UB. Each `x[row,i]`
+is one 64-element vector; `horizontal_*` reduces its lanes to a scalar.
+
+```text
+Baseline:
+  for row:
+    m = vector(-infinity)
+    for i = 0..15: m = max(m, load_UB(x[row,i]))
+    M = horizontal_max(m); s = vector(0)
+    for i = 0..15:
+      e = exp(load_UB(x[row,i]) - M)
+      store_UB(saved_exp[row,i], e); s += e
+    S = horizontal_sum(s); wait_for_exp_stores()
+    for i = 0..15: store_UB(y[row,i], load_UB(saved_exp[row,i]) / S)
+
+Inner-unrolled, row loop:
+  for row:
+    v0, ..., v15 = load_UB(x[row,0]), ..., load_UB(x[row,15])
+    M = horizontal_max(elementwise_max(v0, ..., v15))
+    v0, ..., v15 = exp(v0 - M), ..., exp(v15 - M)
+    S = horizontal_sum(v0 + ... + v15)
+    store_UB(y[row,0], v0 / S); ...; store_UB(y[row,15], v15 / S)
+```
+
+The `...` operations are explicit source statements, not inner loops; the
+fully unrolled version also expands the outer row loop. Scalar M/S are
+broadcast for vector arithmetic. The normal-settings variant below needs no pragma.
+
+Why it helps: the 16-row traces show UB loads **768 → 256**, stores
+**512 → 256**, and intermediate-buffer barriers **16 → 0**, with unchanged
+math counts and no extra spills. VF time falls **1.339 → 1.127 us** (15.8%);
+largely unchanged GM transfers limit the overall tick improvement to about 4–5%.
+
+Unrolling is not mathematically necessary: a compiler could retain values in
+registers from loop-based source too. But a runtime-indexed temporary array
+does not guarantee register storage; if placed in UB, reloads remain. Explicit
+vector names make reuse straightforward. Keeping the outer row loop also
+avoids the large instruction stream and observed 32-row cache slowdown.
+
 The 32-row case still uses two explicit 16-row batches. Twenty rows remains
 the largest resident batch for the matched three-buffer address layout.
 No input transposition or inter-row grouping was introduced. All rows are

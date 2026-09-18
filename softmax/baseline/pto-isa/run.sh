@@ -16,5 +16,10 @@ exec > >(tee run.log) 2>&1
 printf 'A5 simulator artifacts: %s\nOpen-file limit: %s\n' "$ARTIFACT_DIR" "$(ulimit -S -n)"
 "$PYTHON_BIN" "$LAB_ROOT/generate.py" --output input.bin
 # Timeout covers simulator startup, kernel execution, copies, and shutdown.
-timeout --kill-after=10s "${SIM_TIMEOUT_SEC:-1800}s" "$BUILD_DIR/verify" input.bin output.bin
+timeout --kill-after=10s "${SIM_TIMEOUT_SEC:-1800}s" \
+  "${MSOPPROF_BIN:-$CANN_ROOT/tools/msopprof/bin/msopprof}" simulator \
+  --kernel-name=row_softmax --soc-version="$SOC_VERSION" \
+  --core-id="${PROFILE_CORE_ID:-0}" --launch-count=1 \
+  --timeout="${PROFILE_TIMEOUT_MIN:-30}" --output="$ARTIFACT_DIR/profile" \
+  "$BUILD_DIR/verify" input.bin output.bin
 "$PYTHON_BIN" "$LAB_ROOT/compare.py" --input input.bin --output output.bin

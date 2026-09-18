@@ -1,9 +1,9 @@
-# Row-softmax baseline: 100 × 1024
+# Row-softmax baseline: 10 × 1024
 
 Two editable A5 kernels compute softmax independently along each 1024-element
 row, using FP32 input, FP32 arithmetic and FP32 output. Both use the stable
 formula `exp(x - max(x)) / sum(exp(x - max(x)))` and support finite inputs.
-The fixed launch is four vector blocks, processing 25 rows each.
+The fixed launch is four vector blocks, processing 3, 3, 2 and 2 rows respectively.
 
 ## Run on Bluezone
 
@@ -15,7 +15,7 @@ cd ~/npu-tutorial/softmax/baseline/pto-isa
 bash run.sh
 ```
 
-Each run builds the kernel and host, generates the same seeded 100×1024 input,
+Each run builds the kernel and host, generates the same seeded 10×1024 input,
 executes the A5 operator simulator, writes the output tensor, and runs the Python
 comparison. `bash build.sh` builds only; `bash run.sh --no-build` reruns without
 compiling. Scripts work from any current directory. Failures return nonzero.
@@ -61,7 +61,7 @@ preserving those dependencies.
 Each run prints its unique `build/sim-XXXXXXXX` directory. It contains:
 
 - `input.bin`, `output.bin`, `reference.bin`: contiguous row-major FP32 tensors,
-  100×1024, each exactly 409600 bytes; reference.bin is the float64 NumPy
+  10×1024, each exactly 40960 bytes; reference.bin is the float64 NumPy
   reference rounded to FP32.
 - `run.log`: simulator output and comparison summary.
 - Simulator `.dump` traces.
@@ -87,14 +87,35 @@ python3 compare.py --input /path/to/cce-run/input.bin \
 ```
 
 Both outputs must use the same input; default generation is identical. Load a
-tensor for inspection with `np.fromfile(path, dtype=np.float32).reshape(100, 1024)`.
+tensor for inspection with `np.fromfile(path, dtype=np.float32).reshape(10, 1024)`.
 Keep the entire baseline directory when copying it: both backends use `common/`.
 
 ## Validation status
 
-Both implementations passed all 102400 output comparisons in the A5 simulator.
+Both implementations passed all 10240 output comparisons in the A5 simulator.
 See [VALIDATION.md](VALIDATION.md) for errors, artifact paths and the direct
 backend comparison. PTO's TROWMAX uses a negative-infinity initializer, which
 triggers simulator `vec_err_idata_inf_nan_t0` diagnostics on VMAX in this passing
 configuration; consult the validation notes rather than treating these specific
 messages alone as a numerical failure.
+
+## Operator profiling
+
+`bash run.sh` now invokes `$CANN_ROOT/tools/msopprof/bin/msopprof simulator`
+around the host executable and then runs the same numerical checker. It uses
+the existing env.sh paths; `activate_ptoas` and .bashrc sourcing are unnecessary.
+A bare `msopprof` selects device profiling, which is not the mode used here.
+
+Reports are under each new `build/sim-*/profile/OPPROF_*/simulator/` directory:
+`trace.json` plus per-core `*_instr_exe.csv` files. `PROFILE_CORE_ID` defaults
+to 0 (the profiler's core group; on this simulator its report includes vector
+subcores core0.veccore0 and core0.veccore1). All kernel blocks still execute and
+the complete output is checked. `MSOPPROF_BIN` can override the executable.
+`PROFILE_TIMEOUT_MIN` defaults to 30 minutes; the outer SIM_TIMEOUT_SEC also
+remains in effect.
+
+The installed profiler may warn about PC-start lookup and absent debug_line
+information. Instruction traces are still generated, but these builds lack
+source-line/call-stack attribution. Adding compiler `-g` is a separate optional
+build change. Profiling can perturb simulation ticks; compare runs made with
+identical profiling settings.

@@ -1,12 +1,12 @@
-"""Validate all 100x1024 results, optionally comparing the other backend too."""
+"""Validate all 10x1024 results, optionally comparing the other backend too."""
 import argparse
 from pathlib import Path
 import numpy as np
 
 def load(path):
-    if Path(path).stat().st_size != 100 * 1024 * 4:
-        raise ValueError(f"{path}: expected exactly 409600 bytes (100x1024 FP32)")
-    return np.fromfile(path, dtype=np.float32).reshape(100, 1024)
+    if Path(path).stat().st_size != 10 * 1024 * 4:
+        raise ValueError(f"{path}: expected exactly 40960 bytes (10x1024 FP32)")
+    return np.fromfile(path, dtype=np.float32).reshape(10, 1024)
 
 def check(label, got, expected):
     close = np.isclose(got, expected, rtol=2e-5, atol=2e-7)

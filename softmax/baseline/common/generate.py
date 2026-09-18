@@ -6,7 +6,7 @@ p.add_argument("--output", required=True)
 p.add_argument("--seed", type=int, default=2026)
 a = p.parse_args()
 rng = np.random.default_rng(a.seed)
-x = rng.normal(0, 3, (100, 1024)).astype(np.float32)
+x = rng.normal(0, 3, (10, 1024)).astype(np.float32)
 x[0] = 0
 x[1] = 1000
 x[2] = -1000

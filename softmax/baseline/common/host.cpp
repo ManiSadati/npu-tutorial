@@ -11,7 +11,7 @@ static void check(aclError e, const char* op) {
 #define ACL(op) check((op), #op)
 int main(int argc, char** argv) {
     if (argc != 3) { std::fprintf(stderr, "Usage: verify input.bin output.bin\n"); return 2; }
-    constexpr size_t count = 100 * 1024, bytes = count * sizeof(float);
+    constexpr size_t count = 10 * 1024, bytes = count * sizeof(float);
     void *input = nullptr, *output = nullptr;
     aclrtStream stream = nullptr;
     bool initialized = false, device = false;
@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     try {
         std::vector<float> x(count), y(count, std::numeric_limits<float>::quiet_NaN());
         std::ifstream file(argv[1], std::ios::binary | std::ios::ate);
-        if (!file || file.tellg() != std::streampos(bytes)) throw std::runtime_error("Input must be 100x1024 FP32");
+        if (!file || file.tellg() != std::streampos(bytes)) throw std::runtime_error("Input must be 10x1024 FP32");
         file.seekg(0); file.read(reinterpret_cast<char*>(x.data()), bytes);
         if (!file) throw std::runtime_error("Input read failed");
         ACL(aclInit(nullptr)); initialized = true;
@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
         std::ofstream result(argv[2], std::ios::binary);
         result.write(reinterpret_cast<const char*>(y.data()), bytes); result.close();
         if (!result) throw std::runtime_error("Output write failed");
-        std::printf("Saved 100x1024 FP32 output to %s\n", argv[2]);
+        std::printf("Saved 10x1024 FP32 output to %s\n", argv[2]);
         status = 0;
     } catch (const std::exception& e) { std::fprintf(stderr, "%s\n", e.what()); }
     auto cleanup = [&](aclError e) { if (e != ACL_SUCCESS) { std::fprintf(stderr, "Cleanup failed: %d\n", int(e)); status = 1; } };

@@ -9,7 +9,7 @@ cd ~/npu-tutorial/softmax/fused/cce
 bash run.sh
 ```
 
-Uses the baseline's 100×1024 FP32 contract, four vector blocks, DMA/sync sequence,
+Uses the baseline's 10×1024 FP32 contract, four vector blocks, DMA/sync sequence,
 A5 `dav-c310-vec` target, compiler options, host, input generator and Python
 checker. `bash run.sh --no-build` skips rebuilding. Setup and timeout behavior
 are the same as [baseline](../baseline/README.md). The common host and Python
@@ -84,3 +84,24 @@ Use simulator output for functional checks; measure hardware before claiming a
 speedup. Input domain, shape and tolerances remain those of the baseline.
 
 See [VALIDATION.md](VALIDATION.md) for the passing simulator/reference/baseline comparisons and performance limitations.
+
+## Operator profiling
+
+`bash run.sh` now invokes `$CANN_ROOT/tools/msopprof/bin/msopprof simulator`
+around the host executable and then runs the same numerical checker. It uses
+the existing env.sh paths; `activate_ptoas` and .bashrc sourcing are unnecessary.
+A bare `msopprof` selects device profiling, which is not the mode used here.
+
+Reports are under each new `build/sim-*/profile/OPPROF_*/simulator/` directory:
+`trace.json` plus per-core `*_instr_exe.csv` files. `PROFILE_CORE_ID` defaults
+to 0 (the profiler's core group; on this simulator its report includes vector
+subcores core0.veccore0 and core0.veccore1). All kernel blocks still execute and
+the complete output is checked. `MSOPPROF_BIN` can override the executable.
+`PROFILE_TIMEOUT_MIN` defaults to 30 minutes; the outer SIM_TIMEOUT_SEC also
+remains in effect.
+
+The installed profiler may warn about PC-start lookup and absent debug_line
+information. Instruction traces are still generated, but these builds lack
+source-line/call-stack attribution. Adding compiler `-g` is a separate optional
+build change. Profiling can perturb simulation ticks; compare runs made with
+identical profiling settings.

@@ -4,8 +4,7 @@ extern "C" __global__ [aicore] void row_softmax(__gm__ float* input, __gm__ floa
     auto x = (__ubuf__ float*)get_imm(0);
     auto ex = (__ubuf__ float*)get_imm(4096);
     auto y = (__ubuf__ float*)get_imm(8192);
-    auto scalar = (__ubuf__ float*)get_imm(12288);
-    for (unsigned row = get_block_idx(); row < 100; row += 4) {
+    for (unsigned row = get_block_idx(); row < 10; row += 4) {
         copy_gm_to_ubuf_align_v2((__ubuf__ uint16_t*)x, (__gm__ uint16_t*)(input + row * 1024),
                                0, 1, 4096, 0, 0, false, 0, 0, 0);
         set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
@@ -27,17 +26,12 @@ extern "C" __global__ [aicore] void row_softmax(__gm__ float* input, __gm__ floa
                 vadd(sums, sums, expv, mask, MODE_ZEROING);
             }
             vcmax(reduced, maxv, mask, MODE_ZEROING);
-            vsts(reduced, scalar, 0, ONEPT_B32, mask);
-            mem_bar(VST_VLD);
-            vlds(rowmax, scalar, 0, BRC_B32);
+            vdup(rowmax, reduced, mask, POS_LOWEST, MODE_ZEROING);
             vsub(reduced, maxv, rowmax, mask, MODE_ZEROING);
             vexp(reduced, reduced, mask, MODE_ZEROING);
             vmul(sums, sums, reduced, mask, MODE_ZEROING);
             vcadd(reduced, sums, mask, MODE_ZEROING);
-            // The sum occupies a different 32-byte slot from the maximum.
-            vsts(reduced, scalar, 8, ONEPT_B32, mask);
-            mem_bar(VST_VLD);
-            vlds(rowsum, scalar, 8, BRC_B32);
+            vdup(rowsum, reduced, mask, POS_LOWEST, MODE_ZEROING);
             for (uint16_t i = 0; i < 16; ++i) {
                 vlds(value, x, i * 64, NORM);
                 vsub(value, value, rowmax, mask, MODE_ZEROING);

@@ -1,6 +1,6 @@
 #include <pto/pto-inst.hpp>
 using namespace pto;
-// Four vector blocks, each owning 25 rows. All addresses are UB byte offsets.
+// Four vector blocks, owning 3, 3, 2 and 2 rows. All addresses are UB byte offsets.
 extern "C" __global__ AICORE void row_softmax(__gm__ float* input, __gm__ float* output) {
     using G = GlobalTensor<float, Shape<1,1,1,1,1024>, pto::Stride<1024,1024,1024,1024,1>>;
     using Row = Tile<TileType::Vec, float, 1, 1024, BLayout::RowMajor, 1, 1024>;
@@ -10,7 +10,7 @@ extern "C" __global__ AICORE void row_softmax(__gm__ float* input, __gm__ float*
     TASSIGN(x, 0); TASSIGN(shifted, 4096); TASSIGN(expx, 8192);
     TASSIGN(y, 12288); TASSIGN(scratch, 16384);
     TASSIGN(maximum, 20480); TASSIGN(sum, 20512);
-    for (unsigned row = get_block_idx(); row < 100; row += 4) {
+    for (unsigned row = get_block_idx(); row < 10; row += 4) {
         G gx(input + row * 1024), gy(output + row * 1024);
         TLOAD(x, gx);
         set_flag(PIPE_MTE2, PIPE_V, EVENT_ID0);
