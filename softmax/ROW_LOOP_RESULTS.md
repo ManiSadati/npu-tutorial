@@ -50,14 +50,29 @@ is one 64-element vector; `horizontal_*` reduces its lanes to a scalar.
 ```text
 Baseline:
   for row:
-    m = vector(-infinity)
-    for i = 0..15: m = max(m, load_UB(x[row,i]))
-    M = horizontal_max(m); s = vector(0)
+    # 1. Find the row maximum
+    lane_max = vector(-infinity)
     for i = 0..15:
-      e = exp(load_UB(x[row,i]) - M)
-      store_UB(saved_exp[row,i], e); s += e
-    S = horizontal_sum(s); wait_for_exp_stores()
-    for i = 0..15: store_UB(y[row,i], load_UB(saved_exp[row,i]) / S)
+      value = load_UB(x[row,i])
+      lane_max = max(lane_max, value)
+    row_max = horizontal_max(lane_max)
+
+    # 2. Subtract, exponentiate, save, and accumulate
+    lane_sum = vector(0)
+    for i = 0..15:
+      value = load_UB(x[row,i])
+      value = value - row_max
+      exp_value = exp(value)
+      store_UB(saved_exp[row,i], exp_value)
+      lane_sum = lane_sum + exp_value
+    row_sum = horizontal_sum(lane_sum)
+    wait_for_exp_stores()
+
+    # 3. Divide by the row sum and store output
+    for i = 0..15:
+      exp_value = load_UB(saved_exp[row,i])
+      result = exp_value / row_sum
+      store_UB(y[row,i], result)
 
 Inner-unrolled, row loop:
   for row:
@@ -69,7 +84,7 @@ Inner-unrolled, row loop:
 ```
 
 The `...` operations are explicit source statements, not inner loops; the
-fully unrolled version also expands the outer row loop. Scalar M/S are
+fully unrolled version also expands the outer row loop. Scalar maxima/sums are
 broadcast for vector arithmetic. The normal-settings variant below needs no pragma.
 
 Why it helps: the 16-row traces show UB loads **768 → 256**, stores
